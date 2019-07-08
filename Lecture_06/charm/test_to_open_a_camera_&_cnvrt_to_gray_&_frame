@@ -1,0 +1,59 @@
+import cv2
+import numpy as np
+from os import path
+
+name=input("Enter your name")
+cap=cv2.VideoCapture(0)
+face_list=[]
+count=0
+classifier=cv2.CascadeClassifier("haarcascade_frontalface.xml")
+while True:
+
+    ret,img=cap.read()
+
+    gray=cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
+
+    faces=classifier.detectMultiScale(gray)
+    areas=[]
+
+    for face in faces:
+        X,y,w,h=face
+        area=w*h
+        areas.append((area,face))
+
+    areas=sorted(areas,reverse=True)
+
+    if len(areas)>0:
+        face=areas[0][1]
+        x,y,w,h=face
+        frame=gray[x:x+w,y:y+h]
+        cv2.rectangle(gray, (x, y), (x + w, y + h), (255, 255, 0), 2)
+        face_img = cv2.resize(face, (100, 100))
+
+        face_list.append(face_img.flatten())
+
+        count-=1
+        print("LOADED",50-count)
+
+    if count<=0:
+        break
+
+    cv2.imshow("video", gray)
+    if cv2.waitKey(1) > 30:
+        break
+
+face_list=np.array(face_list)
+names=np.full([len(face_list.shape),1],name)
+
+total=np.hstack([names,face_list])
+
+
+if path.exists('facelet.npy'):
+    data=np.load('facelet.npy')
+    data=np.vstack([data,total])
+else:
+    data=total
+np.save('facelet.npy', data)
+
+cap.release()
+cv2.destroyAllWindows()
