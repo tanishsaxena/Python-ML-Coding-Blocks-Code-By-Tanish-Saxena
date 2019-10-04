@@ -1,0 +1,59 @@
+import numpy as np
+from sklearn.neighbors import KNeighborsClassifier
+
+data = np.load("faces.npy")
+
+X = data[:, 1:].astype(int)
+y = data[:, 0]
+
+model = KNeighborsClassifier(4)
+model.fit(X, y)
+
+import cv2
+import numpy as np
+
+cap = cv2.VideoCapture(0)
+
+classifier = cv2.CascadeClassifier("haarcascade_frontalface.xml")
+
+
+while True:
+    ret, frame = cap.read()
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+
+    faces = classifier.detectMultiScale(gray)
+
+    areas = []
+
+    for face in faces:
+        x, y, w, h = face  # face have 4 attributes x,y,w,h and we are unpacking these tuples
+        area = w * h
+        areas.append((area, face))
+    areas = sorted(areas, reverse=True)
+
+    if len(areas) > 0:
+        face = areas[0][1]
+        x, y, w, h = face
+
+        names = []
+
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 3)
+        face_img = gray[y:y + h, x:x + w]
+
+        face_img = cv2.resize(face_img, (100, 100))
+
+        flat = face_img.flatten()
+        res = model.predict([flat])
+        print(res)
+        name=res.tolist()
+        name=str(name)
+        cv2.putText(frame, name[2:len(name)-2], (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0))
+
+    cv2.imshow("faces", frame)
+
+    if cv2.waitKey(1) > 30:
+        break
+
+cap.release()
+cv2.destroyAllWindows()
